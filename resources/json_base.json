@@ -4,9 +4,9 @@
 		"commandbyte": {"val": "0x35", "dtype": "uint8"},
 		"version":
 		{
-			"major": {"val": "0x02", "dtype": "uint8"},
-			"minor": {"val": "0x00", "dtype": "uint8"},
-			"build": {"val": "0x01", "dtype": "uint8"},
+			"major": {"val": "0x03", "dtype": "uint8"},
+			"minor": {"val": "0x0C", "dtype": "uint8"},
+			"build": {"val": "0x00", "dtype": "uint8"},
 			"unused": {"val": "0x00", "dtype": "uint8"}
 		},
 		"gameinfoblock":
