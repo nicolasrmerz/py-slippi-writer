@@ -1,0 +1,108 @@
+{
+	"start":
+	{
+		"commandbyte": {"val": "0x35", "dtype": "uint8"},
+		"version":
+		{
+			"major": {"val": "0x02", "dtype": "uint8"},
+			"minor": {"val": "0x00", "dtype": "uint8"},
+			"build": {"val": "0x01", "dtype": "uint8"},
+			"unused": {"val": "0x00", "dtype": "uint8"}
+		},
+		"gameinfoblock":
+		{
+			"gamebitfield1": {"val": "0x32", "dtype": "uint8"},
+			"gamebitfield2": {"val": "0x01", "dtype": "uint8"},
+			"gamebitfield3": {"val": "0x8E", "dtype": "uint8"},
+			"gamebitfield4": {"val": "0x4C", "dtype": "uint8"},
+			"gibpadx04": {"val": "0x00", "dtype": "uint8", "len": "2"},
+			"bombrain": {"val": "0x00", "dtype": "uint8"},
+			"gibpadx07": {"val": "0x00", "dtype": "uint8"},
+			"isteams": {"val": "0x00", "dtype": "bool"},
+            "gibpadx09": {"val": "0x00", "dtype": "uint8", "len": "2"},
+			"itemspawnbehavior": {"val": "0xFF", "dtype": "int8"},
+			"selfdestructscorevalue": {"val": "0xFF", "dtype": "int8"},
+            "gibpadx0D": {"val": "0x6E", "dtype": "uint8"},
+			"stage": {"val": "0x0000", "dtype": "uint16"},
+			"gametimer": {"val": "0x000001E0", "dtype": "uint32"},
+            "gibpadx11": {"val": "0x00", "dtype": "uint8", "len": "15"},
+			"itemspawnbitfield1": {"val": "0xFF", "dtype": "uint8"},
+			"itemspawnbitfield2": {"val": "0xFF", "dtype": "uint8"},
+			"itemspawnbitfield3": {"val": "0xFF", "dtype": "uint8"},
+			"itemspawnbitfield4": {"val": "0xFF", "dtype": "uint8"},
+			"itemspawnbitfield5": {"val": "0xFF", "dtype": "uint8"},
+            "gibpadx28": {"val": "0x00", "dtype": "uint8", "len": "8"},
+			"damageratio": {"val": "0x3F800000", "dtype": "f32"},
+			"gibpadx34": {"val": "0x00", "dtype": "uint8", "len": "44"},
+            "playerdata":
+            {
+                "data": {
+                    "externalcharid": {"val": "0x00", "dtype": "uint8"},
+                    "playtertype": {"val": "0x03", "dtype": "uint8"},
+                    "stockstartcount": {"val": "0x04", "dtype": "uint8"},
+                    "costumeindex": {"val": "0x01", "dtype": "uint8"},
+                    "gibpadx64": {"val": "0x00", "dtype": "uint8", "len": "3"},
+                    "teamshade": {"val": "0x00", "dtype": "uint8"},
+                    "handicap": {"val": "0x09", "dtype": "uint8"},
+                    "teamid": {"val": "0x00", "dtype": "uint8"},
+                    "gibpadx6A": {"val": "0x00", "dtype": "uint8", "len": "2"},
+                    "playerbitfield": {"val": "0xC0", "dtype": "uint8"},
+                    "gibpadx6D": {"val": "0x00", "dtype": "uint8", "len": "2"},
+                    "cpulevel": {"val": "0x01", "dtype": "uint8"},
+                    "damagestart": {"val": "0x0000", "dtype": "uint16"},
+                    "damagespawn": {"val": "0x0000", "dtype": "uint16"},
+                    "gibpadx74": {"val": "0x00", "dtype": "uint8", "len": "4"},
+                    "offenseratio": {"val": "0x3F800000", "dtype": "f32"},
+                    "defenseratio": {"val": "0x3F800000", "dtype": "f32"},
+                    "modelscale": {"val": "0x3F800000", "dtype": "f32"}
+                },
+                "repetitions": "6"
+            }
+        },
+        "randomseed": {"val": "0x00000000", "dtype": "uint32"},
+        "dashandshieldfix":
+        {
+            "data": {
+                "dashbackfix": {"val": "0x00000000", "dtype": "uint32"},
+                "shielddropfix": {"val": "0x00000000", "dtype": "uint32"}
+            },
+            "repetitions": "4"
+        },
+        "nametag":
+        {
+            "data": {
+                "nametag": {"val": "0x0000", "dtype": "uint16", "len": "8"}
+            },
+            "repetitions": "4"
+        },
+        "pal": {"val": "0x00", "dtype": "bool"},
+        "frozenps": {"val": "0x00", "dtype": "bool"},
+        "minorscene": {"val": "0x02", "dtype": "uint8"},
+        "majorscene": {"val": "0x02", "dtype": "uint8"},
+        "displayname":
+        {
+            "data": {
+                "displayname": {"val": "0x0000", "dtype": "uint16", "len": "8"},
+                "dnnullterm": {"val": "0x00", "dtype": "uint8"}
+            },
+            "repetitions": "4"
+        },
+        "connectcode":
+        {
+            "data": {
+                "connectcodestr": {"val": "0x00", "dtype": "uint8", "len": "7"},
+                "connectcodenum": {"val": "0x0000", "dtype": "uint16"},
+                "ccnullterm": {"val": "0x00", "dtype": "uint8"}
+            },
+            "repetitions": "4"
+        },
+        "slippiuid":
+        {
+            "data": {
+                "slippiuid": {"val": "0x00", "dtype": "string", "len": "29"}
+            },
+            "repetitions": "4"
+        },
+        "languageoption": {"val": "0x01", "dtype": "uint8"}
+	}
+}
