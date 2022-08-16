@@ -19,6 +19,19 @@ DataEnum = {
     'string': 'B'
 }
 
+SizeEnum = {
+    'uint8': 1,
+    'uint16': 2,
+    'uint32': 4,
+    'int8': 1,
+    'int16': 2,
+    'int32': 4,
+    'f32': 4,
+    'bool': 1,
+    # TODO: Treating string as uint8 will not work once strings are taken from py-slippi Game - need to handle DataAndType val being an actual string
+    'string': 1
+}
+
 class Version:
     def __init__(self, ver_str):
         ver_list = ver_str.split('.')
@@ -56,6 +69,8 @@ class DataAndType:
     l: int #: Number of times to write this data
     def __init__(self, val: str, dtype: str, ver_str: str, l: int):
         self.dtype = dtype
+        
+        self.size = SizeEnum[self.dtype]
 
         if self._check_is_hex(val):
             self.val = struct.unpack('>' + DataEnum[self.dtype], bytes.fromhex(val[2:]))[0]
@@ -87,8 +102,9 @@ class Writer:
     
     g: int #: Game object from py-slippi
 
-    def __init__(self, json_path=os.path.join('resources', 'json_base.json'), g=None):
+    def __init__(self, json_path=os.path.join('resources', 'json_base.json'), bin_path=None, g=None):
         self.version = None
+        self.payloads = None
         self.start = None
         self.gecko = None
         self.frametemplate = None
@@ -97,6 +113,65 @@ class Writer:
         self.read_base_json(json_path)
         if g:
             self.load_game(g)
+        if bin_path:
+            try:
+                self.load_gecko_code(bin_path)
+            except Exception as e:
+                raise Exception(str(e))
+                
+            
+    def unpack(self, fmt, stream):
+        fmt = '>' + fmt
+        size = struct.calcsize(fmt)
+        bytes = stream.read(size)
+        if not bytes:
+            raise EOFError()
+        return struct.unpack(fmt, bytes)
+        
+    def expect_bytes(self, expected_bytes, stream):
+        read_bytes = stream.read(len(expected_bytes))
+        if read_bytes != expected_bytes:
+            raise Exception(f'expected {expected_bytes}, but got: {read_bytes}')
+    
+    def _parse_event_payloads(self, stream):
+        (code, this_size) = self.unpack('BB', stream)
+
+        this_size -= 1 # includes size byte for some reason
+        command_count = this_size // 3
+        if command_count * 3 != this_size:
+            raise Exception(f'payload size not divisible by 3: {this_size}')
+
+        sizes = {}
+        for i in range(command_count):
+            (code, size) = self.unpack('BH', stream)
+            sizes[code] = size
+
+        return (2 + this_size, sizes)
+        
+    def load_gecko_code(self, bin_path, gecko_event_code=0x3D):
+        with open(bin_path, 'rb') as stream:
+            self.expect_bytes(b'{U\x03raw[$U#l', stream)
+            (length,) = self.unpack('l', stream)
+            (bytes_read, payload_sizes) = self._parse_event_payloads(stream)
+            if gecko_event_code not in payload_sizes:
+                return
+                
+            bytes_read = 0
+            while bytes_read != length:
+                (code,) = self.unpack('B', stream)
+                if code in payload_sizes:
+                    size = payload_sizes[code]
+                    b = stream.read(size)
+                    if code == gecko_event_code:
+                        self.gecko = bytes([gecko_event_code]) + b
+                        return
+                        
+                    bytes_read += 1 + size
+                else:
+                    return
+            
+            return
+                    
 
     def _postprocess_json(self, j, root_key):
         key_list = list(j[root_key].keys())
@@ -183,9 +258,57 @@ class Writer:
             for key in list(d.keys()):
                 self._write_helper(d[key], stream)
 
+    def _write_helper_caller(self, od, stream):
+        if od:
+            for key in list(od.keys()):
+                self._write_helper(od[key], stream)
+                
+    def _calc_payload_size(self, od):
+        if isinstance(od, DataAndType):
+            if od.version <= self.version:
+                return (od.size * od.l)
+            else:
+                return 0
+            
+        accum = 0
+        if isinstance(od, list):
+            for e in od:
+                accum += self._calc_payload_size(e)
+        else:
+            for k in od.keys():
+                accum += self._calc_payload_size(od[k])
+                
+        return accum
+    
+    def calc_and_write_prefix(self, stream):
+        payloads = {}
+        payloads[self.start['commandbyte'].val] = self._calc_payload_size(self.start) - 1
+        payloads[0x3D] = len(self.gecko) - 1
+        # Each payload size is code + 2-byte size, except for the payload itself which is code + 1-byte size
+        payloads[0x35] = (len(payloads.keys()) * 3) + 2
+        
+        l = 0
+        for code in payloads:
+            l += payloads[code]
+            # TODO: When frames are added, will need to add length of frametemplate * number of frames
+            
+        stream.write(b'{U\x03raw[$U#l')
+        stream.write(struct.pack('>l', l))
+        
+        for code in sorted(payloads.keys()):
+            stream.write(struct.pack('>B', code))
+            fmt_str = '>B' if code == 0x35 else '>H'
+            stream.write(struct.pack(fmt_str, payloads[code]))
+
+        
+        
+    
     def write(self, bin_path=os.path.join('output', 'out.slp')):
         with open(bin_path, 'wb') as stream:
-            for od in [self.start, self.gecko, self.frames, self.end]:
-                if od:
-                    for key in list(od.keys()):
-                        self._write_helper(od[key], stream)
+            self.calc_and_write_prefix(stream)
+            self._write_helper_caller(self.start, stream)
+            if self.gecko:
+                stream.write(self.gecko)
+            #_write_helper_caller(self.frames, stream)
+            #_write_helper_caller(self.end, stream)
+
