@@ -1,4 +1,5 @@
 from slippi import Game
+from slippi.event import StateFlags
 from enum import Enum
 import os
 from collections import OrderedDict
@@ -107,8 +108,10 @@ class Writer:
         self.payloads = None
         self.start = None
         self.gecko = None
-        self.frametemplate = None
-        self.frames = None
+        self.preframetemplate = None
+        self.postframetemplate = None
+        self.preframes = None
+        self.postframes = None
         self.end = None
         self.read_base_json(json_path)
         if g:
@@ -199,8 +202,10 @@ class Writer:
                 self.start = data['start']
             if 'gecko' in keys:
                 self.gecko = data['gecko']
-            if 'frametemplate' in keys:
-                self.frametemplate = data['frametemplate']
+            if 'preframeupdatetemplate' in keys:
+                self.preframetemplate = data['preframeupdatetemplate']
+            if 'postframeupdatetemplate' in keys:
+                self.postframetemplate = data['postframeupdatetemplate']
             if 'end' in keys:
                 self.end = data['end']
 
@@ -240,12 +245,99 @@ class Writer:
 
         if hasattr(g_start, 'stage'):
             self.start['gameinfoblock']['stage'].val = g_start.stage
+            
+    def _convert_stateflags(self, sf):
+        reflect = bool(sf & StateFlags.REFLECT)
+        untouchable = bool(sf & StateFlags.UNTOUCHABLE)
+        fast_fall = bool(sf & StateFlags.FAST_FALL)
+        hit_lag = bool(sf & StateFlags.HIT_LAG)
+        shield = bool(sf & StateFlags.SHIELD)
+        hit_stun = bool(sf & StateFlags.HIT_STUN)
+        shield_touch = bool(sf & StateFlags.SHIELD_TOUCH)
+        power_shield = bool(sf & StateFlags.POWER_SHIELD)
+        follower = bool(sf & StateFlags.FOLLOWER)
+        sleep = bool(sf & StateFlags.SLEEP)
+        dead = bool(sf & StateFlags.DEAD)
+        off_screen = bool(sf & StateFlags.OFF_SCREEN)
+        
+        sf_1 = 0 | (reflect << 4)
+        sf_2 = 0 | (untouchable << 2) | (fast_fall << 3) | (hit_lag << 5)
+        sf_3 = 0 | (shield << 7)
+        sf_4 = 0 | (hit_stun << 1) | (shield_touch << 2) | (power_shield << 5)
+        sf_5 = 0 | (follower << 3) | (sleep << 4) | (dead << 6) | (off_screen << 7)
+        
+        return sf_1, sf_2, sf_3, sf_4, sf_5
+    
+    def _handle_frames(self, frames):
+        self.preframes = []
+        self.postframes = []
+        for f in frames:
+            frame_num = f.index
+            curr_preframe = [None, None, None, None]
+            curr_postframe = [None, None, None, None]
+            for i, port in enumerate(f.ports):
+                if port != None:
+                    if hasattr(port, 'leader') and hasattr(port, 'follower'):
+                        if port.leader:
+                            data = port.leader
+                            is_follower = False
+                        elif port.follower:
+                            data = port.follower
+                            is_follower = True
+                            
+                        pre = copy.deepcopy(self.preframetemplate)
+                        post = copy.deepcopy(self.postframetemplate)
+                        if hasattr(data, 'post'):
+                            post['framenumber'].val = frame_num
+                            post['playerindex'].val = i
+                            post['isfollower'].val = is_follower
+                            if hasattr(data.post, 'airborne'):
+                                post['groundairstate'].val = data.post.airborne
+                            if hasattr(data.post, 'character'):
+                                post['internalcharacterid'].val = data.post.character
+                            if hasattr(data.post, 'combo_count'):
+                                post['currentcombocount'].val = data.post.combo_count
+                            if hasattr(data.post, 'damage'):
+                                post['percent'].val = data.post.damage
+                            if hasattr(data.post, 'direction'):
+                                post['facingdirection'].val = data.post.direction
+                            if hasattr(data.post, 'flags'):
+                                post['statebitflags1'].val, post['statebitflags2'].val, post['statebitflags3'].val, post['statebitflags4'].val, post['statebitflags5'].val = self._convert_stateflags(data.post.flags)
+                            if hasattr(data.post, 'ground'):
+                                post['lastgroundid'].val = data.post.ground
+                            if hasattr(data.post, 'hit_stun'):
+                                post['miscas'].val = data.post.hit_stun
+                            if hasattr(data.post, 'jumps'):
+                                post['jumpsremaining'].val = data.post.jumps
+                            if hasattr(data.post, 'l_cancel'):
+                                post['lcancelstatus'].val = data.post.l_cancel
+                            if hasattr(data.post, 'last_attack_landed'):
+                                post['lasthittingattackid'].val = data.post.last_attack_landed
+                            if hasattr(data.post, 'last_hit_by'):
+                                post['lasthitby'].val = data.post.last_hit_by
+                            if hasattr(data.post, 'position'):
+                                post['xposition'].val = data.post.position[0]
+                                post['yposition'].val = data.post.position[1]
+                            if hasattr(data.post, 'state'):
+                                post['actionstateid'].val = data.post.state
+                            if hasattr(data.post, 'state_age'):
+                                post['actionstateframecounter'].val = data.post.state_age
+                            if hasattr(data.post, 'stocks'):
+                                post['stocksremaining'].val = data.post.stocks
+                                
+                        if hasattr(data, 'post'):
+                            post['framenumber'].val = frame_num
+                            post['playerindex'].val = i
+                            post['isfollower'].val = is_follower
+                            
         
     def load_game(self, g):
         if hasattr(g.start, 'slippi') and hasattr(g.start.slippi, 'version'):
             self.version = Version(str(g.start.slippi.version.major) + '.' + str(g.start.slippi.version.minor) + '.' + str(g.start.slippi.version.revision))
         if g.start:
             self._handle_start(g.start)
+        if g.frames != None and len(g.frames) > 0:
+            self._handle_frames(g.frames)
 
     def _write_helper(self, d, stream):
         if isinstance(d, DataAndType):
